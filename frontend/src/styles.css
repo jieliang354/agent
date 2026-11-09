@@ -1,13 +1,13 @@
 /**
  * 全局样式入口
- * 加载 Tailwind 层并定义页面基础样式与背景纹理
+ * 深空底色、HUD 网格/扫描线/噪点、自定义滚动条与减少动效支持
  */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-    color-scheme: light;
+    color-scheme: dark;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -26,7 +26,8 @@ body,
 
 body {
     margin: 0;
-    background: #f7f1e8;
+    background-color: #050a12;
+    color: #e8f2ff;
     overflow: hidden;
 }
 
@@ -35,19 +36,112 @@ textarea {
     font: inherit;
 }
 
-::selection {
-    background: rgba(47, 107, 79, 0.2);
+textarea {
+    caret-color: #22d3ee;
 }
 
-.grain {
-    opacity: 0.32;
-    background-image: radial-gradient(
-        circle at 1px 1px,
-        rgba(32, 32, 29, 0.18) 1px,
-        transparent 0
+::selection {
+    background: rgba(34, 211, 238, 0.28);
+    color: #f2fbff;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(34, 211, 238, 0.22) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, 0.16);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 211, 238, 0.32);
+    border: 3px solid transparent;
+    background-clip: content-box;
+}
+
+:where(button, a, textarea, [tabindex]):focus-visible {
+    outline: 2px solid rgba(34, 211, 238, 0.65);
+    outline-offset: 2px;
+}
+
+/* 深空网格：向下淡出，避免抢内容 */
+.tech-grid {
+    background-image:
+        linear-gradient(rgba(120, 180, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120, 180, 255, 0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: radial-gradient(
+        ellipse 90% 70% at 50% 0%,
+        #000 20%,
+        transparent 78%
     );
-    background-size: 18px 18px;
-    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 72%);
+    mask-image: radial-gradient(
+        ellipse 90% 70% at 50% 0%,
+        #000 20%,
+        transparent 78%
+    );
+}
+
+.scanlines {
+    background-image: repeating-linear-gradient(
+        to bottom,
+        rgba(190, 225, 255, 0.05) 0px,
+        rgba(190, 225, 255, 0.05) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    opacity: 0.28;
+}
+
+.noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: 0.035;
+}
+
+.text-gradient {
+    background: linear-gradient(100deg, #f2f8ff 0%, #a5f3fc 42%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* 雷达扫描：只显示外圈，形成扫描扇面 */
+.radar-sweep {
+    background: conic-gradient(
+        from 0deg,
+        rgba(34, 211, 238, 0.34),
+        rgba(34, 211, 238, 0.08) 16%,
+        transparent 32%,
+        transparent 100%
+    );
+    -webkit-mask-image: radial-gradient(
+        circle at center,
+        #000 0 68%,
+        transparent 69%
+    );
+    mask-image: radial-gradient(circle at center, #000 0 68%, transparent 69%);
+}
+
+.hud-line {
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(34, 211, 238, 0.45),
+        transparent
+    );
 }
 
 @media (prefers-reduced-motion: reduce) {

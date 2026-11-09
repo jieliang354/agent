@@ -13,6 +13,23 @@ export function formatTime(timestamp: number) {
   }).format(timestamp);
 }
 
+/** 生成形如 Q-1106-204512 的查询编号，用于消息头部 HUD 展示 */
+export function formatQueryId(timestamp: number) {
+  const date = new Date(timestamp);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `Q-${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(
+    date.getHours(),
+  )}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
+const numberFormatter = new Intl.NumberFormat("zh-CN", {
+  maximumFractionDigits: 2,
+});
+
+export function formatNumber(value: number) {
+  return numberFormatter.format(value);
+}
+
 export function summarizeResult(data: unknown) {
   if (Array.isArray(data)) {
     return data.length > 0 ? `查询完成，共 ${data.length} 行结果。` : "查询完成，结果为空。";

@@ -6,8 +6,6 @@ import {
   Activity,
   BarChart3,
   Eraser,
-  History,
-  Leaf,
   MessageSquarePlus,
   Server,
 } from "lucide-react";
@@ -16,7 +14,7 @@ import { Composer } from "./components/Composer";
 import { EmptyState } from "./components/EmptyState";
 import { MessageBubble } from "./components/MessageBubble";
 import { streamQuery } from "./lib/agentApi";
-import { cn, summarizeResult } from "./lib/format";
+import { cn } from "./lib/format";
 import type { AgentEvent, ChatMessage, StepState } from "./types/agent";
 
 const examples = [
@@ -33,11 +31,15 @@ function makeId() {
 }
 
 function upsertStep(steps: StepState[] = [], event: Extract<AgentEvent, { type: "progress" }>) {
+  const now = Date.now();
+  const existing = steps.find((item) => item.step === event.step);
   const next = steps.filter((item) => item.step !== event.step);
   next.push({
     step: event.step,
     status: event.status,
-    updatedAt: Date.now(),
+    startedAt: existing?.startedAt ?? now,
+    finishedAt: event.status === "success" || event.status === "error" ? now : undefined,
+    updatedAt: now,
   });
   return next;
 }
@@ -57,6 +59,7 @@ export default function App() {
   );
 
   useEffect(() => {
+    if (messages.length === 0) return;
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
@@ -106,7 +109,7 @@ export default function App() {
             return {
               ...message,
               status: "done",
-              content: summarizeResult(event.data),
+              content: "查询完成，已返回结构化结果。",
               result: event.data,
             };
           }
@@ -160,106 +163,157 @@ export default function App() {
   };
 
   return (
-    <div className="h-dvh overflow-hidden bg-parchment text-ink">
-      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(90deg,rgba(32,32,29,0.045)_1px,transparent_1px),linear-gradient(rgba(32,32,29,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
-      <div className="pointer-events-none fixed inset-0 grain" />
+    <div className="relative h-dvh overflow-hidden bg-space text-fg">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0">
+        <div className="absolute -left-40 -top-48 h-[560px] w-[560px] rounded-full bg-accent/10 blur-[140px] animate-breathe" />
+        <div className="absolute -bottom-56 -right-32 h-[640px] w-[640px] rounded-full bg-iris/10 blur-[160px] animate-breathe [animation-delay:2.5s]" />
+        <div className="absolute inset-0 tech-grid" />
+        <div className="absolute inset-0 scanlines" />
+        <div className="absolute inset-0 noise" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,transparent_30%,#050a12_100%)]" />
+      </div>
 
-      <div className="relative grid h-full min-h-0 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="hidden min-h-0 border-r border-ink/10 bg-[#efe6d8]/85 backdrop-blur lg:flex lg:flex-col">
-          <div className="border-b border-ink/10 px-5 py-5">
+      <div className="relative z-10 grid h-full min-h-0 grid-cols-1 overflow-hidden lg:grid-cols-[264px_minmax(0,1fr)]">
+        <aside className="relative hidden min-h-0 flex-col border-r border-line/50 bg-deep/45 backdrop-blur-xl lg:flex">
+          <div className="border-b border-line/50 px-5 py-5">
             <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center bg-ink text-parchment">
-                <BarChart3 className="h-5 w-5" aria-hidden="true" />
+              <div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-accent/30 bg-gradient-to-br from-accent/15 via-transparent to-iris/15 shadow-glow">
+                <BarChart3 className="h-5 w-5 text-accent" aria-hidden="true" />
+                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-neon shadow-[0_0_8px_#34f5a8]" />
               </div>
-              <div>
-                <div className="text-base font-semibold tracking-[0.02em]">电商问数</div>
-                <div className="text-xs text-ink/50">shopkeeper-agent</div>
+              <div className="min-w-0">
+                <div className="truncate text-[15px] font-semibold tracking-wide">电商问数</div>
+                <div className="truncate font-mono text-[10px] tracking-[0.22em] text-dim/70">
+                  SHOPKEEPER · AGENT
+                </div>
               </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between rounded-lg border border-line/60 bg-white/[0.02] px-3 py-2">
+              <span className="inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-dim">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neon shadow-[0_0_8px_#34f5a8]" />
+                SYSTEM ONLINE
+              </span>
+              <span className="font-mono text-[10px] text-dim/50">v0.1</span>
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-5">
             <button
               type="button"
               onClick={clearConversation}
               disabled={isStreaming}
-              className="flex h-11 w-full items-center justify-center gap-2 bg-ink text-sm font-semibold text-parchment transition hover:bg-soot disabled:cursor-not-allowed disabled:bg-ink/35"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-[#38bdf8] text-sm font-semibold text-space shadow-[0_0_28px_-10px_rgba(34,211,238,0.8)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
             >
               <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
               新会话
             </button>
 
             <section>
-              <div className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-[0.16em] text-ink/45">
-                <History className="h-3.5 w-3.5" aria-hidden="true" />
-                样例
+              <div className="mb-2 px-1 font-mono text-[10px] tracking-[0.24em] text-dim/60">
+                SAMPLE PROMPTS
               </div>
               <div className="space-y-2">
-                {examples.map((example) => (
+                {examples.map((example, index) => (
                   <button
                     key={example}
                     type="button"
+                    title={example}
                     disabled={isStreaming}
                     onClick={() => startQuery(example)}
-                    className="w-full border border-ink/10 bg-white/42 px-3 py-3 text-left text-sm leading-5 text-ink/75 transition hover:border-moss/35 hover:bg-white/75 disabled:cursor-not-allowed disabled:opacity-55"
+                    className="group flex w-full items-start gap-3 rounded-xl border border-line/60 bg-white/[0.015] px-3 py-3 text-left transition hover:border-accent/35 hover:bg-accent/[0.05] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {example}
+                    <span className="mt-0.5 shrink-0 font-mono text-[10px] text-accent/70">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="line-clamp-2 flex-1 text-[13px] leading-5 text-dim transition group-hover:text-fg">
+                      {example}
+                    </span>
                   </button>
                 ))}
               </div>
             </section>
           </div>
 
-          <div className="border-t border-ink/10 p-4">
-            <div className="grid gap-2 text-xs text-ink/55">
-              <div className="flex items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-2">
-                  <Server className="h-3.5 w-3.5" aria-hidden="true" />
-                  API
-                </span>
-                <span className="truncate font-mono">{API_BASE_URL}</span>
+          <div className="border-t border-line/50 p-4">
+            <div className="rounded-xl border border-line/60 bg-white/[0.015] p-3 font-mono text-[10px]">
+              <div className="mb-2 flex items-center gap-2 tracking-[0.18em] text-dim/60">
+                <Server className="h-3 w-3" aria-hidden="true" />
+                ENDPOINT
               </div>
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2">
-                  <Activity className="h-3.5 w-3.5" aria-hidden="true" />
-                  完成
+              <div className="truncate text-dim" title={API_BASE_URL}>
+                {API_BASE_URL}
+              </div>
+              <div className="mt-3 flex items-center justify-between border-t border-line/50 pt-2.5">
+                <span className="inline-flex items-center gap-1.5 text-dim/60">
+                  <Activity className="h-3 w-3" aria-hidden="true" />
+                  DONE
                 </span>
-                <span>{completedCount}</span>
+                <span className="text-accent">{String(completedCount).padStart(2, "0")}</span>
               </div>
             </div>
           </div>
         </aside>
 
-        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-          <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink/10 bg-parchment/88 px-4 backdrop-blur lg:px-6">
+        <main className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
+          <header className="relative flex h-16 shrink-0 items-center justify-between border-b border-line/50 bg-space/55 px-4 backdrop-blur-xl lg:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="grid h-9 w-9 shrink-0 place-items-center bg-moss text-white lg:hidden">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-accent/25 bg-accent/10 text-accent lg:hidden">
                 <BarChart3 className="h-4 w-4" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-ink">智能数据分析 Agent</div>
-                <div className="truncate text-xs text-ink/45">FastAPI SSE / LangGraph</div>
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-semibold">智能数据分析</span>
+                  <span className="hidden rounded border border-line/70 bg-white/[0.02] px-1.5 py-0.5 font-mono text-[9px] tracking-[0.16em] text-dim/70 sm:inline">
+                    v0.1
+                  </span>
+                </div>
+                <div className="truncate font-mono text-[10px] tracking-[0.16em] text-dim/60">
+                  FASTAPI SSE · LANGGRAPH
+                </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={clearConversation}
-              disabled={messages.length === 0 || isStreaming}
-              className={cn(
-                "grid h-9 w-9 place-items-center rounded-full text-ink/55 transition hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-35",
-              )}
-              title="清空"
-              aria-label="清空"
-            >
-              <Eraser className="h-4 w-4" aria-hidden="true" />
-            </button>
+
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "hidden items-center gap-2 rounded-full border px-2.5 py-1 font-mono text-[10px] tracking-[0.16em] sm:inline-flex",
+                  isStreaming
+                    ? "border-warn/30 bg-warn/10 text-warn"
+                    : "border-neon/20 bg-neon/[0.06] text-neon",
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    isStreaming
+                      ? "animate-pulse bg-warn"
+                      : "bg-neon shadow-[0_0_8px_#34f5a8]",
+                  )}
+                />
+                {isStreaming ? "STREAMING" : "SSE ONLINE"}
+              </span>
+              <button
+                type="button"
+                onClick={clearConversation}
+                disabled={messages.length === 0 || isStreaming}
+                className="grid h-9 w-9 place-items-center rounded-lg border border-transparent text-dim transition hover:border-line hover:bg-white/[0.03] hover:text-fg disabled:cursor-not-allowed disabled:opacity-30"
+                title="清空会话"
+                aria-label="清空会话"
+              >
+                <Eraser className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
           </header>
 
-          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div
+            ref={scrollRef}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          >
             {messages.length === 0 ? (
               <EmptyState examples={examples} onUseExample={(example) => setDraft(example)} />
             ) : (
-              <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 lg:px-8">
+              <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 lg:px-8">
                 {messages.map((message) => (
                   <MessageBubble key={message.id} message={message} />
                 ))}
@@ -267,12 +321,6 @@ export default function App() {
             )}
           </div>
 
-          <div className="border-t border-ink/10 bg-[#efe6d8]/45 px-4 py-2 text-center text-xs text-ink/45">
-            <span className="inline-flex items-center gap-2">
-              <Leaf className="h-3.5 w-3.5 text-moss" aria-hidden="true" />
-              {isStreaming ? "运行中" : "就绪"}
-            </span>
-          </div>
           <Composer
             value={draft}
             disabled={!canSubmit}

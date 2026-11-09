@@ -25,6 +25,8 @@ export type AgentEvent = ProgressEvent | ResultEvent | ErrorEvent;
 export type StepState = {
   step: string;
   status: ProgressStatus;
+  startedAt: number;
+  finishedAt?: number;
   updatedAt: number;
 };
 
